@@ -467,34 +467,71 @@ st.sidebar.caption(
     "inspect observations and ask the AI assistant."
 )
 
+
+# =========================================================
+# SIDEBAR: DATA AND FILTERS
+# =========================================================
+
+st.sidebar.markdown("## 🌧️ RainTrack UAE")
+st.sidebar.caption("Your rainfall exploration workspace")
+
+uploaded = st.sidebar.file_uploader(
+    "Upload rainfall data",
+    type=["nc", "csv"],
+    help="Upload a NASA NetCDF file or a compatible CSV."
+)
+
+st.sidebar.divider()
+st.sidebar.markdown("### 📍 Dashboard guide")
+st.sidebar.caption(
+    "Explore the map, compare UAE locations, "
+    "inspect observations and ask the AI assistant."
+)
+
+# Find the actual project folder, regardless of where
+# Streamlit Cloud runs the application from.
+BASE_DIR = Path(__file__).resolve().parent
+
 data = None
 is_nasa_period_map = False
 period_start = None
 period_end = None
 
 try:
-
     if uploaded is not None:
 
         if uploaded.name.lower().endswith(".nc"):
-
             data, period_start, period_end = load_nasa_netcdf(
                 uploaded.getvalue()
             )
-
             is_nasa_period_map = True
 
         else:
             data = load_nasa_csv(uploaded)
 
     else:
+        # Search both the main project folder and data folder.
+        root_nc_files = list(BASE_DIR.glob("*.nc"))
 
-        data_folder = Path("data")
-        nc_files = list(data_folder.glob("*.nc"))
+        data_folder = BASE_DIR / "data"
+
+        if data_folder.exists():
+            data_nc_files = list(data_folder.glob("*.nc"))
+        else:
+            data_nc_files = []
+
+        # Combine both lists.
+        nc_files = root_nc_files + data_nc_files
+
+        # Remove duplicate paths, if any.
+        nc_files = list(dict.fromkeys(nc_files))
 
         if nc_files:
-
             selected_file = nc_files[0]
+
+            st.sidebar.success(
+                f"NASA file found: {selected_file.name}"
+            )
 
             data, period_start, period_end = load_nasa_netcdf(
                 selected_file.read_bytes()
@@ -504,8 +541,30 @@ try:
 
         else:
             st.sidebar.warning(
-                "Upload a NASA .nc or CSV file to begin."
+                "No .nc file found in the project folder or data folder."
             )
+
+            st.info(
+                "No NASA rainfall file was found. "
+                "Please upload your .nc or CSV file using the sidebar."
+            )
+
+            st.write("Files available in the project folder:")
+
+            try:
+                available_files = [
+                    str(path.relative_to(BASE_DIR))
+                    for path in BASE_DIR.rglob("*")
+                    if path.is_file()
+                    and ".git" not in path.parts
+                ]
+
+                st.write(available_files[:100])
+
+            except Exception:
+                st.write("Could not list project files.")
+
+            st.stop()
 
 except Exception as exc:
     st.error(f"Could not load the data: {exc}")
@@ -518,6 +577,7 @@ if data is None or data.empty:
         "or check the data folder."
     )
     st.stop()
+
 
 
 # =========================================================
