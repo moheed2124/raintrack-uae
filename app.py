@@ -1,15 +1,14 @@
-
 import os
 import tempfile
 from pathlib import Path
 
+import folium
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import requests
 import streamlit as st
 import xarray as xr
-import folium
 from folium.plugins import HeatMap
 from streamlit_folium import st_folium
 
@@ -27,7 +26,7 @@ st.set_page_config(
 
 
 # =========================================================
-# MODERN DESIGN
+# DESIGN
 # =========================================================
 
 st.markdown("""
@@ -37,23 +36,17 @@ st.markdown("""
 html, body, [class*="css"] {
     font-family: 'DM Sans', sans-serif;
 }
-
 .stApp {
     background:
         radial-gradient(circle at 10% 0%, #12334a 0%, transparent 35%),
         linear-gradient(145deg, #071321 0%, #0a1929 55%, #0b202a 100%);
     color: #edf6fa;
 }
-
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #0b1c2d, #102638);
     border-right: 1px solid #244052;
 }
-
-[data-testid="stSidebar"] * {
-    color: #e6f2f7;
-}
-
+[data-testid="stSidebar"] * { color: #e6f2f7; }
 .hero {
     background: linear-gradient(115deg, #10394a, #10283f 55%, #125047);
     border: 1px solid #286174;
@@ -62,21 +55,14 @@ html, body, [class*="css"] {
     margin: 4px 0 25px 0;
     box-shadow: 0 12px 40px rgba(0,0,0,.18);
 }
-
 .hero h1 {
     font-size: 2.65rem;
     font-weight: 800;
-    color: #ffffff;
+    color: white;
     margin: 0;
     letter-spacing: -1.5px;
 }
-
-.hero p {
-    color: #c1dce5;
-    font-size: 1.02rem;
-    margin: 8px 0 0 0;
-}
-
+.hero p { color: #c1dce5; font-size: 1.02rem; margin-top: 8px; }
 .eyebrow {
     color: #75e2cf;
     font-size: .76rem;
@@ -85,7 +71,6 @@ html, body, [class*="css"] {
     text-transform: uppercase;
     margin-bottom: 8px;
 }
-
 .section-heading {
     color: #f0f8fb;
     font-size: 1.35rem;
@@ -93,12 +78,7 @@ html, body, [class*="css"] {
     margin-top: 8px;
     margin-bottom: 12px;
 }
-
-.muted {
-    color: #a9c1ce;
-    font-size: .88rem;
-}
-
+.muted { color: #a9c1ce; font-size: .88rem; }
 div[data-testid="stMetric"] {
     background: linear-gradient(145deg, #10283c, #123346);
     border: 1px solid #28516a;
@@ -106,16 +86,8 @@ div[data-testid="stMetric"] {
     padding: 17px 18px;
     box-shadow: 0 5px 20px rgba(0,0,0,.12);
 }
-
-div[data-testid="stMetricLabel"] {
-    color: #b9d0dc;
-}
-
-div[data-testid="stMetricValue"] {
-    color: #f4fbff;
-    font-weight: 750;
-}
-
+div[data-testid="stMetricLabel"] { color: #b9d0dc; }
+div[data-testid="stMetricValue"] { color: #f4fbff; font-weight: 750; }
 .stButton > button {
     border-radius: 12px;
     border: 1px solid #2b6875;
@@ -123,15 +95,8 @@ div[data-testid="stMetricValue"] {
     color: white;
     font-weight: 700;
     min-height: 42px;
-    transition: .2s ease;
 }
-
-.stButton > button:hover {
-    border-color: #70e0cf;
-    color: white;
-    transform: translateY(-1px);
-}
-
+.stButton > button:hover { border-color: #70e0cf; color: white; }
 .stDownloadButton > button {
     border-radius: 12px;
     background: #123d4c;
@@ -139,7 +104,6 @@ div[data-testid="stMetricValue"] {
     border: 1px solid #347081;
     font-weight: 700;
 }
-
 div[data-testid="stChatMessage"] {
     background: #10283a;
     border: 1px solid #29485a;
@@ -147,85 +111,36 @@ div[data-testid="stChatMessage"] {
     padding: 12px;
     margin-bottom: 10px;
 }
-
-div[data-testid="stChatInput"] textarea {
-    background: #10283a;
-    color: white;
-    border-radius: 14px;
-}
-
-.stTabs [data-baseweb="tab"] {
-    color: #c6dce5;
-    font-weight: 700;
-}
-
-.stTabs [aria-selected="true"] {
-    color: #6ce0cc !important;
-}
-
-hr {
-    border-color: #244356;
-}
-
-.small-status {
-    color: #75d9c5;
-    font-size: .82rem;
-    font-weight: 700;
-}
+.stTabs [data-baseweb="tab"] { color: #c6dce5; font-weight: 700; }
+.stTabs [aria-selected="true"] { color: #6ce0cc !important; }
+hr { border-color: #244356; }
+.small-status { color: #75d9c5; font-size: .82rem; font-weight: 700; }
 </style>
 """, unsafe_allow_html=True)
 
 
 # =========================================================
-# OPENROUTER API SETTINGS
+# OPENROUTER SETTINGS
 # =========================================================
 
 try:
     API_KEY = st.secrets["OPENROUTER_API_KEY"].strip()
-    AI_MODEL = st.secrets.get(
-        "OPENROUTER_MODEL",
-        "openai/gpt-4o-mini"
-    )
+    AI_MODEL = st.secrets.get("OPENROUTER_MODEL", "openai/gpt-4o-mini")
 except (KeyError, FileNotFoundError):
     API_KEY = os.getenv("OPENROUTER_API_KEY", "").strip()
-    AI_MODEL = os.getenv(
-        "OPENROUTER_MODEL",
-        "openai/gpt-4o-mini"
-    )
+    AI_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
 
-AI_READY = bool(
-    API_KEY and API_KEY != "YOUR_API_KEY_HERE"
-)
+AI_READY = bool(API_KEY and API_KEY != "YOUR_API_KEY_HERE")
 
-if AI_READY:
-    try:
-        test_response = requests.get(
-            "https://openrouter.ai/api/v1/auth/key",
-            headers={
-                "Authorization": f"Bearer {API_KEY}"
-            },
-            timeout=20
-        )
-
-        st.write("OpenRouter key test:", test_response.status_code)
-
-        if test_response.status_code == 200:
-            st.success("OpenRouter recognises your API key!")
-        else:
-            st.error("OpenRouter did not accept the API key.")
-            st.write(test_response.text[:500])
-
-    except requests.exceptions.RequestException as exc:
-        st.error(f"Connection test failed: {exc}")
-        
 if not AI_READY:
     st.warning(
         "OpenRouter API key is missing. "
-        "Please check your .streamlit/secrets.toml file."
+        "Check your Streamlit Cloud Secrets or local secrets.toml file."
     )
 
+
 # =========================================================
-# HERO HEADER
+# HERO
 # =========================================================
 
 st.markdown("""
@@ -286,10 +201,7 @@ LOCATIONS = {
 @st.cache_data
 def load_nasa_netcdf(file_bytes):
 
-    with tempfile.NamedTemporaryFile(
-        suffix=".nc",
-        delete=False
-    ) as tmp:
+    with tempfile.NamedTemporaryFile(suffix=".nc", delete=False) as tmp:
         tmp.write(file_bytes)
         temp_path = tmp.name
 
@@ -297,10 +209,7 @@ def load_nasa_netcdf(file_bytes):
 
     try:
         try:
-            ds = xr.open_dataset(
-                temp_path,
-                engine="h5netcdf"
-            )
+            ds = xr.open_dataset(temp_path, engine="h5netcdf")
         except Exception:
             ds = xr.open_dataset(temp_path)
 
@@ -314,48 +223,39 @@ def load_nasa_netcdf(file_bytes):
 
         rainfall = ds[variable_name]
 
-        uae = rainfall.sel(
-            lat=slice(22.55, 26.15),
-            lon=slice(51.45, 56.45)
-        )
+        # Support either ascending or descending latitude coordinates.
+        lat_values = rainfall["lat"].values
+        if lat_values[0] > lat_values[-1]:
+            uae = rainfall.sel(
+                lat=slice(26.15, 22.55),
+                lon=slice(51.45, 56.45)
+            )
+        else:
+            uae = rainfall.sel(
+                lat=slice(22.55, 26.15),
+                lon=slice(51.45, 56.45)
+            )
 
-        df = uae.to_dataframe(
-            name="rain_rate"
-        ).reset_index()
-
+        df = uae.to_dataframe(name="rain_rate").reset_index()
         df = df.dropna(subset=["rain_rate"])
 
         start_time = ds.attrs.get(
-            "start_time",
-            "2024-04-16T00:00:00Z"
+            "start_time", "2024-04-16T00:00:00Z"
         )
-
         end_time = ds.attrs.get(
-            "end_time",
-            "2024-04-27T00:00:00Z"
+            "end_time", "2024-04-27T00:00:00Z"
         )
 
     finally:
         if ds is not None:
             ds.close()
-
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-    df["date"] = pd.to_datetime(
-        start_time,
-        utc=True
-    )
-
+    df["date"] = pd.to_datetime(start_time, utc=True)
     df["latitude"] = df["lat"]
     df["longitude"] = df["lon"]
-
-    df["date_label"] = (
-        str(start_time)[:10]
-        + " to "
-        + str(end_time)[:10]
-    )
-
+    df["date_label"] = str(start_time)[:10] + " to " + str(end_time)[:10]
     df["source_type"] = "NASA IMERG time-averaged map"
 
     return df, str(start_time), str(end_time)
@@ -370,24 +270,14 @@ ALIASES = {
     "lat": ["lat", "latitude"],
     "lon": ["lon", "longitude"],
     "rain": [
-        "precipitation",
-        "precipitation_rate",
-        "precip_rate",
-        "rainfall",
-        "rain_rate",
-        "value",
-        "mean",
-        "precip"
+        "precipitation", "precipitation_rate", "precip_rate",
+        "rainfall", "rain_rate", "value", "mean", "precip"
     ],
 }
 
 
 def find_column(df, candidates):
-
-    lower = {
-        str(c).strip().lower(): c
-        for c in df.columns
-    }
+    lower = {str(c).strip().lower(): c for c in df.columns}
 
     for name in candidates:
         if name in lower:
@@ -401,7 +291,6 @@ def find_column(df, candidates):
 
 
 def load_nasa_csv(uploaded_file):
-
     raw = pd.read_csv(uploaded_file)
 
     date_col = find_column(raw, ALIASES["date"])
@@ -417,30 +306,21 @@ def load_nasa_csv(uploaded_file):
     df = pd.DataFrame()
 
     df["date"] = pd.to_datetime(
-        raw[date_col],
-        errors="coerce",
-        utc=True
+        raw[date_col], errors="coerce", utc=True
     )
-
     df["rain_rate"] = pd.to_numeric(
-        raw[rain_col],
-        errors="coerce"
+        raw[rain_col], errors="coerce"
     )
-
     df["latitude"] = (
         pd.to_numeric(raw[lat_col], errors="coerce")
         if lat_col else np.nan
     )
-
     df["longitude"] = (
         pd.to_numeric(raw[lon_col], errors="coerce")
         if lon_col else np.nan
     )
 
-    df = df.dropna(
-        subset=["date", "rain_rate"]
-    )
-
+    df = df.dropna(subset=["date", "rain_rate"])
     df["date_label"] = df["date"].dt.strftime("%Y-%m-%d")
     df["source_type"] = "Uploaded CSV"
 
@@ -448,7 +328,8 @@ def load_nasa_csv(uploaded_file):
 
 
 # =========================================================
-# SIDEBAR: DATA AND FILTERS
+# SIDEBAR AND DATA LOADING
+# IMPORTANT: THERE IS ONLY ONE FILE UPLOADER
 # =========================================================
 
 st.sidebar.markdown("## 🌧️ RainTrack UAE")
@@ -457,7 +338,8 @@ st.sidebar.caption("Your rainfall exploration workspace")
 uploaded = st.sidebar.file_uploader(
     "Upload rainfall data",
     type=["nc", "csv"],
-    help="Upload a NASA NetCDF file or a compatible CSV."
+    help="Upload a NASA NetCDF file or a compatible CSV.",
+    key="rainfall_file_uploader"
 )
 
 st.sidebar.divider()
@@ -467,29 +349,6 @@ st.sidebar.caption(
     "inspect observations and ask the AI assistant."
 )
 
-
-# =========================================================
-# SIDEBAR: DATA AND FILTERS
-# =========================================================
-
-st.sidebar.markdown("## 🌧️ RainTrack UAE")
-st.sidebar.caption("Your rainfall exploration workspace")
-
-uploaded = st.sidebar.file_uploader(
-    "Upload rainfall data",
-    type=["nc", "csv"],
-    help="Upload a NASA NetCDF file or a compatible CSV."
-)
-
-st.sidebar.divider()
-st.sidebar.markdown("### 📍 Dashboard guide")
-st.sidebar.caption(
-    "Explore the map, compare UAE locations, "
-    "inspect observations and ask the AI assistant."
-)
-
-# Find the actual project folder, regardless of where
-# Streamlit Cloud runs the application from.
 BASE_DIR = Path(__file__).resolve().parent
 
 data = None
@@ -499,32 +358,25 @@ period_end = None
 
 try:
     if uploaded is not None:
-
         if uploaded.name.lower().endswith(".nc"):
             data, period_start, period_end = load_nasa_netcdf(
                 uploaded.getvalue()
             )
             is_nasa_period_map = True
-
         else:
             data = load_nasa_csv(uploaded)
 
     else:
-        # Search both the main project folder and data folder.
+        # Search the project root AND the data folder.
         root_nc_files = list(BASE_DIR.glob("*.nc"))
-
         data_folder = BASE_DIR / "data"
 
-        if data_folder.exists():
-            data_nc_files = list(data_folder.glob("*.nc"))
-        else:
-            data_nc_files = []
+        data_nc_files = (
+            list(data_folder.glob("*.nc"))
+            if data_folder.exists() else []
+        )
 
-        # Combine both lists.
-        nc_files = root_nc_files + data_nc_files
-
-        # Remove duplicate paths, if any.
-        nc_files = list(dict.fromkeys(nc_files))
+        nc_files = list(dict.fromkeys(root_nc_files + data_nc_files))
 
         if nc_files:
             selected_file = nc_files[0]
@@ -536,40 +388,29 @@ try:
             data, period_start, period_end = load_nasa_netcdf(
                 selected_file.read_bytes()
             )
-
             is_nasa_period_map = True
 
         else:
             st.sidebar.warning(
                 "No .nc file found in the project folder or data folder."
             )
-
             st.info(
                 "No NASA rainfall file was found. "
-                "Please upload your .nc or CSV file using the sidebar."
+                "Upload your .nc or CSV file using the sidebar."
             )
 
             st.write("Files available in the project folder:")
-
-            try:
-                available_files = [
-                    str(path.relative_to(BASE_DIR))
-                    for path in BASE_DIR.rglob("*")
-                    if path.is_file()
-                    and ".git" not in path.parts
-                ]
-
-                st.write(available_files[:100])
-
-            except Exception:
-                st.write("Could not list project files.")
-
+            available_files = [
+                str(path.relative_to(BASE_DIR))
+                for path in BASE_DIR.rglob("*")
+                if path.is_file() and ".git" not in path.parts
+            ]
+            st.write(available_files[:100])
             st.stop()
 
 except Exception as exc:
     st.error(f"Could not load the data: {exc}")
     st.stop()
-
 
 if data is None or data.empty:
     st.warning(
@@ -579,21 +420,17 @@ if data is None or data.empty:
     st.stop()
 
 
-
 # =========================================================
 # DATA SOURCE INFORMATION
 # =========================================================
 
 if is_nasa_period_map:
-
     st.success("NASA GPM IMERG data successfully loaded.")
-
     st.info(
         f"Observation period: {period_start} to {period_end}. "
         "This file is a time-averaged precipitation map, "
         "not a live or daily rainfall feed."
     )
-
 else:
     st.success("Your uploaded rainfall observations are loaded.")
 
@@ -611,7 +448,6 @@ st.sidebar.divider()
 st.sidebar.markdown("### 📅 Observation filters")
 
 if not is_nasa_period_map:
-
     min_date = data["date"].min().date()
     max_date = data["date"].max().date()
 
@@ -622,7 +458,7 @@ if not is_nasa_period_map:
         max_value=max_date
     )
 
-    if isinstance(date_range, tuple) and len(date_range) == 2:
+    if isinstance(date_range, (tuple, list)) and len(date_range) == 2:
         start_date, end_date = date_range
     else:
         start_date = end_date = date_range
@@ -631,10 +467,8 @@ if not is_nasa_period_map:
         (data["date"].dt.date >= start_date)
         & (data["date"].dt.date <= end_date)
     ].copy()
-
 else:
     filtered = data.copy()
-
 
 if filtered.empty:
     st.warning("No data available for this date selection.")
@@ -642,7 +476,7 @@ if filtered.empty:
 
 
 # =========================================================
-# CALCULATE OVERVIEW STATISTICS
+# OVERVIEW STATISTICS
 # =========================================================
 
 mean_rate = float(filtered["rain_rate"].mean())
@@ -650,9 +484,7 @@ max_rate = float(filtered["rain_rate"].max())
 min_rate = float(filtered["rain_rate"].min())
 median_rate = float(filtered["rain_rate"].median())
 
-highest_row = filtered.loc[
-    filtered["rain_rate"].idxmax()
-]
+highest_row = filtered.loc[filtered["rain_rate"].idxmax()]
 
 location_available = (
     filtered["latitude"].notna().any()
@@ -680,11 +512,11 @@ st.markdown(
 )
 
 if location_available and not geo_data.empty:
-
     selected_city = st.selectbox(
         "Choose a location to inspect its nearest satellite grid point",
         list(LOCATIONS.keys()),
-        index=0
+        index=0,
+        key="selected_uae_city"
     )
 
     city_lat, city_lon = LOCATIONS[selected_city]
@@ -694,10 +526,7 @@ if location_available and not geo_data.empty:
         + (geo_data["longitude"] - city_lon) ** 2
     )
 
-    nearest = geo_data.loc[
-        geo_data["distance"].idxmin()
-    ]
-
+    nearest = geo_data.loc[geo_data["distance"].idxmin()]
     city_rate = float(nearest["rain_rate"])
     distance_km = float(nearest["distance"]) * 111
 
@@ -707,12 +536,7 @@ if location_available and not geo_data.empty:
         f"{selected_city} · estimated rate",
         f"{city_rate:.3f} mm/hr"
     )
-
-    c2.metric(
-        "Nearest grid distance",
-        f"{distance_km:.1f} km"
-    )
-
+    c2.metric("Nearest grid distance", f"{distance_km:.1f} km")
     c3.metric(
         "Grid coordinates",
         f"{nearest['latitude']:.2f}, {nearest['longitude']:.2f}"
@@ -722,9 +546,7 @@ if location_available and not geo_data.empty:
         "This value is taken from the nearest available NASA grid cell. "
         "It is not a direct measurement at the city centre."
     )
-
 else:
-
     st.warning(
         "Location insights need usable latitude and longitude columns."
     )
@@ -735,14 +557,12 @@ else:
 # =========================================================
 
 st.divider()
-
 st.markdown(
     '<div class="section-heading">📊 Rainfall overview</div>',
     unsafe_allow_html=True
 )
 
 m1, m2, m3, m4 = st.columns(4)
-
 m1.metric("Average rate", f"{mean_rate:.3f} mm/hr")
 m2.metric("Highest rate", f"{max_rate:.3f} mm/hr")
 m3.metric("Lowest rate", f"{min_rate:.3f} mm/hr")
@@ -782,9 +602,8 @@ with insight1:
     st.markdown("**Average compared with median**")
     st.write(
         f"The mean is {mean_rate:.3f} mm/hr and the median is "
-        f"{median_rate:.3f} mm/hr. The mean is influenced by "
-        "higher values, while the median represents the middle "
-        "grid-cell value."
+        f"{median_rate:.3f} mm/hr. The mean is influenced by higher "
+        "values, while the median represents the middle grid-cell value."
     )
 
 with insight2:
@@ -797,7 +616,7 @@ with insight2:
 
 
 # =========================================================
-# MAP AND RAINFALL CHART
+# MAP AND CHART TABS
 # =========================================================
 
 st.divider()
@@ -807,9 +626,7 @@ map_tab, chart_tab = st.tabs([
     "📈 Rainfall distribution"
 ])
 
-
 with map_tab:
-
     st.markdown("### Explore rainfall across the UAE")
     st.caption(
         "Click a rainfall point to inspect its nearest grid-cell estimate."
@@ -835,11 +652,7 @@ with map_tab:
     ).add_to(fmap)
 
     if not map_df.empty:
-
-        max_val = max(
-            float(map_df["rain_rate"].max()),
-            0.0001
-        )
+        max_val = max(float(map_df["rain_rate"].max()), 0.0001)
 
         heat_data = [
             [
@@ -858,7 +671,6 @@ with map_tab:
         ).add_to(fmap)
 
         for row in map_df.itertuples():
-
             popup_html = f"""
             <div style="font-family:Arial; width:190px;">
                 <h4 style="color:#087f8c;">RainTrack UAE</h4>
@@ -884,25 +696,16 @@ with map_tab:
                 fill=True,
                 fill_color="#f59e0b",
                 fill_opacity=0.9,
-                tooltip=(
-                    f"Rainfall: {float(row.rain_rate):.3f} mm/hr"
-                ),
-                popup=folium.Popup(
-                    popup_html,
-                    max_width=250
-                )
+                tooltip=f"Rainfall: {float(row.rain_rate):.3f} mm/hr",
+                popup=folium.Popup(popup_html, max_width=250)
             ).add_to(fmap)
 
     if location_available and selected_city and nearest is not None:
-
         folium.Marker(
             [city_lat, city_lon],
             tooltip=f"{selected_city} city centre",
             popup=f"{selected_city} city centre",
-            icon=folium.Icon(
-                color="blue",
-                icon="info-sign"
-            )
+            icon=folium.Icon(color="blue", icon="info-sign")
         ).add_to(fmap)
 
         folium.CircleMarker(
@@ -960,10 +763,7 @@ with map_tab:
     </div>
     """
 
-    fmap.get_root().html.add_child(
-        folium.Element(legend_html)
-    )
-
+    fmap.get_root().html.add_child(folium.Element(legend_html))
     folium.LayerControl().add_to(fmap)
 
     map_result = st_folium(
@@ -973,52 +773,40 @@ with map_tab:
         returned_objects=["last_object_clicked"]
     )
 
-    clicked = (
-        map_result.get("last_object_clicked")
-        if map_result else None
-    )
+    clicked = map_result.get("last_object_clicked") if map_result else None
 
     if clicked and not map_df.empty:
-
         click_lat = clicked.get("lat")
         click_lon = clicked.get("lng")
 
         if click_lat is not None and click_lon is not None:
-
             distances = np.sqrt(
                 (map_df["latitude"] - click_lat) ** 2
                 + (map_df["longitude"] - click_lon) ** 2
             )
 
-            clicked_point = map_df.loc[
-                distances.idxmin()
-            ]
+            clicked_point = map_df.loc[distances.idxmin()]
 
             st.markdown("### 📍 Selected rainfall point")
-
             ca, cb, cc = st.columns(3)
 
             ca.metric(
                 "Estimated rate",
                 f"{float(clicked_point['rain_rate']):.3f} mm/hr"
             )
-
             cb.metric(
                 "Latitude",
                 f"{float(clicked_point['latitude']):.3f}°"
             )
-
             cc.metric(
                 "Longitude",
                 f"{float(clicked_point['longitude']):.3f}°"
             )
 
             st.caption(
-                "The value is the nearest available NASA grid-cell "
-                "estimate to your click, not a measurement at the "
-                "exact clicked position."
+                "The value is the nearest available NASA grid-cell estimate "
+                "to your click, not a measurement at the exact clicked position."
             )
-
     else:
         st.info("Click a rainfall point on the map to inspect its value.")
 
@@ -1029,33 +817,24 @@ with map_tab:
 
 
 with chart_tab:
-
     st.markdown("### How are rainfall estimates distributed?")
 
     if is_nasa_period_map:
-
         fig = px.histogram(
             filtered,
             x="rain_rate",
             nbins=20,
             title="Distribution of estimated precipitation rates",
-            labels={
-                "rain_rate": "Precipitation rate (mm/hr)"
-            },
+            labels={"rain_rate": "Precipitation rate (mm/hr)"},
             color_discrete_sequence=["#23b6a5"],
             template="plotly_dark"
         )
-
     else:
-
         daily = (
-            filtered.groupby(
-                filtered["date"].dt.date
-            )["rain_rate"]
+            filtered.groupby(filtered["date"].dt.date)["rain_rate"]
             .mean()
             .reset_index()
         )
-
         daily.columns = ["Date", "Average rate"]
 
         fig = px.line(
@@ -1074,15 +853,12 @@ with chart_tab:
         height=400
     )
 
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
+    st.plotly_chart(fig, use_container_width=True)
 
     if is_nasa_period_map:
         st.caption(
-            "This histogram shows the distribution of grid-cell "
-            "values in the time-averaged map. It is not a daily trend."
+            "This histogram shows the distribution of grid-cell values "
+            "in the time-averaged map. It is not a daily trend."
         )
 
 
@@ -1091,7 +867,6 @@ with chart_tab:
 # =========================================================
 
 if location_available and not geo_data.empty:
-
     st.divider()
 
     st.markdown(
@@ -1102,14 +877,12 @@ if location_available and not geo_data.empty:
     city_results = []
 
     for city, (lat, lon) in LOCATIONS.items():
-
         distances = np.sqrt(
             (geo_data["latitude"] - lat) ** 2
             + (geo_data["longitude"] - lon) ** 2
         )
 
-        closest_index = distances.idxmin()
-        point = geo_data.loc[closest_index]
+        point = geo_data.loc[distances.idxmin()]
 
         city_results.append({
             "Location": city,
@@ -1141,10 +914,7 @@ if location_available and not geo_data.empty:
         yaxis_title="Nearest grid estimate (mm/hr)"
     )
 
-    st.plotly_chart(
-        city_fig,
-        use_container_width=True
-    )
+    st.plotly_chart(city_fig, use_container_width=True)
 
     st.caption(
         "Each bar represents the nearest available satellite grid cell "
@@ -1159,20 +929,13 @@ if location_available and not geo_data.empty:
 st.divider()
 
 with st.expander("📋 Explore and download rainfall data"):
-
     st.write(
         "Inspect the rainfall estimates currently used in the dashboard."
     )
 
     table_df = filtered.copy()
-
-    numeric_columns = table_df.select_dtypes(
-        include=["number"]
-    ).columns
-
-    table_df[numeric_columns] = (
-        table_df[numeric_columns].round(3)
-    )
+    numeric_columns = table_df.select_dtypes(include=["number"]).columns
+    table_df[numeric_columns] = table_df[numeric_columns].round(3)
 
     st.dataframe(
         table_df,
@@ -1180,9 +943,7 @@ with st.expander("📋 Explore and download rainfall data"):
         hide_index=True
     )
 
-    csv_data = table_df.to_csv(
-        index=False
-    ).encode("utf-8")
+    csv_data = table_df.to_csv(index=False).encode("utf-8")
 
     st.download_button(
         label="⬇️ Download rainfall data (CSV)",
@@ -1212,12 +973,9 @@ and get simple explanations based on the currently loaded data.
 </div>
 """, unsafe_allow_html=True)
 
-
 if "raintrack_messages" not in st.session_state:
     st.session_state.raintrack_messages = []
 
-
-# Build current dashboard data context.
 summary = {
     "number_of_records": int(len(filtered)),
     "average_rate_mm_per_hour": round(mean_rate, 4),
@@ -1231,23 +989,18 @@ summary = {
     },
     "selected_location": selected_city,
     "selected_location_nearest_grid_rate_mm_per_hour": (
-        round(city_rate, 4)
-        if city_rate is not None else None
+        round(city_rate, 4) if city_rate is not None else None
     ),
     "data_type": (
         "NASA IMERG time-averaged map"
-        if is_nasa_period_map
-        else "Uploaded CSV observations"
+        if is_nasa_period_map else "Uploaded CSV observations"
     ),
     "observation_period": (
         f"{period_start} to {period_end}"
         if is_nasa_period_map
-        else (
-            f"{filtered['date'].min()} to {filtered['date'].max()}"
-        )
+        else f"{filtered['date'].min()} to {filtered['date'].max()}"
     )
 }
-
 
 st.markdown("**✨ Try asking:**")
 
@@ -1261,9 +1014,7 @@ suggestions = [
 suggestion_cols = st.columns(2)
 
 for i, suggestion in enumerate(suggestions):
-
     with suggestion_cols[i % 2]:
-
         if st.button(
             suggestion,
             key=f"suggestion_{i}",
@@ -1271,32 +1022,22 @@ for i, suggestion in enumerate(suggestions):
         ):
             st.session_state.pending_raintrack_question = suggestion
 
-
 control_a, control_b = st.columns([1, 4])
 
 with control_a:
-
-    if st.button(
-        "🗑️ Clear chat",
-        use_container_width=True
-    ):
+    if st.button("🗑️ Clear chat", use_container_width=True):
         st.session_state.raintrack_messages = []
         st.rerun()
 
 with control_b:
-
     if AI_READY:
         st.caption(f"● OpenRouter configured · Model: {AI_MODEL}")
     else:
         st.caption("AI is waiting for an OpenRouter API key.")
 
-
-# Display existing conversation.
 for message in st.session_state.raintrack_messages:
-
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
-
 
 pending_question = st.session_state.pop(
     "pending_raintrack_question",
@@ -1309,9 +1050,7 @@ typed_question = st.chat_input(
 
 question = pending_question or typed_question
 
-
 if question:
-
     st.session_state.raintrack_messages.append({
         "role": "user",
         "content": question
@@ -1321,63 +1060,50 @@ if question:
         st.markdown(question)
 
     with st.chat_message("assistant"):
-
         if not AI_READY:
-
             answer = (
                 "The AI assistant is not connected yet. "
-                "Please check your OpenRouter API key in "
-                "`.streamlit/secrets.toml`."
+                "Please check your OpenRouter API key in Streamlit Secrets."
             )
-
             st.warning(answer)
 
         else:
-
             answer = ""
 
             with st.spinner("RainTrack AI is thinking..."):
-
                 try:
-
                     system_prompt = """
 You are RainTrack AI, the friendly assistant inside RainTrack UAE.
 
-Your job is to explain rainfall data in simple, clear language.
+Explain rainfall data in simple, clear language.
 
-IMPORTANT RULES:
+Rules:
 1. Use the supplied dashboard data as your factual source.
 2. Never invent measurements, locations, dates or statistics.
-3. Explain precipitation rate in mm/hr as a rate, not an accumulated total.
-4. The NASA IMERG dataset may be a time-averaged map. If so, never call
-   it a daily or half-hourly time series.
+3. Explain mm/hr as a rate, not an accumulated total.
+4. The NASA IMERG dataset may be a time-averaged map. Do not call it
+   a daily or half-hourly time series.
 5. Satellite estimates are not direct ground-gauge measurements.
-6. Do not claim to provide live weather, weather forecasts, flood warnings,
+6. Do not claim to provide live weather, forecasts, flood warnings,
    street-level measurements or groundwater recharge predictions.
-7. Do not claim that a high rainfall rate automatically means flooding.
-8. If the supplied data cannot answer a question, say so honestly.
-9. Use friendly, accessible language. Explain technical terms.
-10. When useful, use short headings and bullet points.
-11. You may explain possible relevance to water security, but clearly
-    distinguish interpretation from measured data.
-
-You are helping users understand the data, not making safety decisions.
+7. Do not claim high rainfall automatically means flooding.
+8. If the data cannot answer a question, say so honestly.
+9. Use friendly, accessible language.
+10. Distinguish interpretation from measured data.
 """
 
                     recent_messages = (
                         st.session_state.raintrack_messages[-10:]
                     )
 
-                    api_messages = [
-                        {
-                            "role": "system",
-                            "content": (
-                                system_prompt
-                                + "\n\nCURRENT DASHBOARD DATA:\n"
-                                + str(summary)
-                            )
-                        }
-                    ]
+                    api_messages = [{
+                        "role": "system",
+                        "content": (
+                            system_prompt
+                            + "\n\nCURRENT DASHBOARD DATA:\n"
+                            + str(summary)
+                        )
+                    }]
 
                     api_messages.extend(recent_messages)
 
@@ -1400,12 +1126,9 @@ You are helping users understand the data, not making safety decisions.
                         timeout=60
                     )
 
-                    # Raise an exception for HTTP errors.
                     response.raise_for_status()
-
                     result = response.json()
 
-                    # Safely extract the AI answer.
                     answer = (
                         result.get("choices", [{}])[0]
                         .get("message", {})
@@ -1429,41 +1152,28 @@ You are helping users understand the data, not making safety decisions.
                     st.markdown(answer)
 
                 except requests.exceptions.HTTPError as exc:
-
                     status_code = (
                         exc.response.status_code
-                        if exc.response is not None
-                        else "Unknown"
+                        if exc.response is not None else "Unknown"
                     )
 
-                    error_details = (
-                        "No additional details were provided."
-                    )
+                    error_details = "No additional details were provided."
 
                     if exc.response is not None:
-
                         try:
                             error_data = exc.response.json()
-
                             if isinstance(error_data, dict):
                                 error_object = error_data.get(
-                                    "error",
-                                    error_data
+                                    "error", error_data
                                 )
-
                                 if isinstance(error_object, dict):
-                                    error_details = (
-                                        error_object.get(
-                                            "message",
-                                            str(error_object)
-                                        )
+                                    error_details = error_object.get(
+                                        "message", str(error_object)
                                     )
                                 else:
                                     error_details = str(error_object)
-
                             else:
                                 error_details = str(error_data)
-
                         except ValueError:
                             error_details = exc.response.text[:1500]
 
@@ -1472,55 +1182,41 @@ You are helping users understand the data, not making safety decisions.
                         f"Details: {error_details}\n\n"
                         f"Configured model: {AI_MODEL}"
                     )
-
                     st.error("AI connection failed")
                     st.code(answer)
 
                 except requests.exceptions.Timeout:
-
                     answer = (
                         "The request to OpenRouter timed out after "
                         "60 seconds. Please try again."
                     )
-
                     st.error(answer)
 
                 except requests.exceptions.ConnectionError:
-
                     answer = (
                         "RainTrack could not connect to OpenRouter. "
                         "Please check your internet connection and try again."
                     )
-
                     st.error(answer)
 
                 except requests.exceptions.RequestException as exc:
-
-                    answer = (
-                        f"A network error occurred: {str(exc)[:1000]}"
-                    )
-
+                    answer = f"A network error occurred: {str(exc)[:1000]}"
                     st.error(answer)
 
                 except (ValueError, KeyError, IndexError) as exc:
-
                     answer = (
                         "The AI service returned an unexpected response. "
                         f"Details: {str(exc)[:1000]}"
                     )
-
                     st.error(answer)
 
                 except Exception as exc:
-
                     answer = (
                         "Something unexpected went wrong: "
                         f"{str(exc)[:1000]}"
                     )
-
                     st.error(answer)
 
-        # Save both successful answers and error messages.
         st.session_state.raintrack_messages.append({
             "role": "assistant",
             "content": answer
@@ -1534,7 +1230,6 @@ You are helping users understand the data, not making safety decisions.
 st.divider()
 
 with st.expander("ℹ️ About RainTrack UAE and its methodology"):
-
     st.markdown("""
 ### Our mission
 
